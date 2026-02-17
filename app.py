@@ -26,18 +26,18 @@ def generer_pdf(data):
 
     for art in data['articles']:
         pdf.cell(100, 10, art['nom'], 1)
-        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']} €", 1, 1, 'R')
+        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']:.2f} €", 1, 1, 'R')
 
     pdf.ln(5)
     pdf.cell(100, 10, "TOTAL HT", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ht']} €", 1, 1, 'R')
+    pdf.cell(40, 10, f"{data['total_ht']:.2f} €", 1, 1, 'R')
     pdf.cell(100, 10, f"TVA ({data['taux_tva']}%)", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_tva']} €", 1, 1, 'R')
+    pdf.cell(40, 10, f"{data['total_tva']:.2f} €", 1, 1, 'R')
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(100, 10, "TOTAL TTC", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ttc']} €", 1, 1, 'R')
+    pdf.cell(40, 10, f"{data['total_ttc']:.2f} €", 1, 1, 'R')
     
-    return pdf.output(dest='S').encode('latin-1')
+    return pdf.output(dest='S')
 
 # --- INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Scanner de Tickets Pro", page_icon="🧾")
@@ -74,4 +74,5 @@ if fichier_image is not None:
                     mime="application/pdf"
                 )
             except Exception as e:
+
                 st.error(f"Erreur : {e}")
