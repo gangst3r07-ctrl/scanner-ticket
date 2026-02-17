@@ -3,41 +3,72 @@ from fpdf import FPDF
 import google.generativeai as genai
 import json
 
-# --- CONFIGURATION ---
-# genai.configure(api_key="AIzaSyAUzrLSEexrKXQS02q1NTvlPWT_spVpz88")
+# --- CONFIGURATION SÉCURISÉE ---
+# Utilise les "Secrets" de Streamlit Cloud pour ta clé API
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    st.error("Clé API manquante. Configurez GEMINI_API_KEY dans les secrets.")
+
 model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- FONCTION GENERATION PDF ---
+# --- FONCTION GENERATION PDF (MÉTHODE UNICODE) ---
 def generer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", 'B', 16)
+    
+    # CHARGEMENT DE LA POLICE UNICODE depuis le dossier fonts/
+    try:
+        pdf.add_font('DejaVu', '', 'fonts/DejaVuSans.ttf')
+        pdf.add_font('DejaVu', 'B', 'fonts/DejaVuSans-Bold.ttf')
+        font_name = 'DejaVu'
+        use_chr128 = False
+    except:
+        # Repli sur Arial avec chr(128) si les fichiers sont absents
+        font_name = 'Arial'
+        use_chr128 = True
+    
+    # En-tête
+    pdf.set_font(font_name, 'B', 16)
     pdf.cell(0, 10, f"FACTURE : {data['nom_magasin']}", 0, 1, 'C')
     pdf.ln(10)
     
-    pdf.set_font("Arial", '', 12)
+    pdf.set_font(font_name, '', 12)
     pdf.cell(0, 10, f"Date: {data['date']}", 0, 1)
     pdf.ln(5)
 
     # Tableau
     pdf.set_fill_color(240, 240, 240)
+    pdf.set_font(font_name, 'B', 12)
     pdf.cell(100, 10, "Article", 1, 0, 'L', True)
     pdf.cell(40, 10, "Prix TTC", 1, 1, 'R', True)
 
+    # Symbole euro
+    euro = chr(128) if use_chr128 else "€"
+    
+    pdf.set_font(font_name, '', 12)
     for art in data['articles']:
         pdf.cell(100, 10, art['nom'], 1)
-        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']:.2f} {chr(128)}", 1, 1, 'R')
+        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']:.2f} {euro}", 1, 1, 'R')
 
     pdf.ln(5)
-    pdf.cell(100, 10, "TOTAL HT", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ht']:.2f} {chr(128)}", 1, 1, 'R')
-    pdf.cell(100, 10, f"TVA ({data['taux_tva']}%)", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_tva']:.2f} {chr(128)}", 1, 1, 'R')
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(100, 10, "TOTAL TTC", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ttc']:.2f} {chr(128)}", 1, 1, 'R')
     
-    return pdf.output(dest='S').encode('latin-1')
+    # Totaux
+    pdf.cell(100, 10, "TOTAL HT", 0, 0, 'R')
+    pdf.cell(40, 10, f"{data['total_ht']:.2f} {euro}", 1, 1, 'R')
+    
+    pdf.cell(100, 10, f"TVA ({data['taux_tva']}%)", 0, 0, 'R')
+    pdf.cell(40, 10, f"{data['total_tva']:.2f} {euro}", 1, 1, 'R')
+    
+    pdf.set_font(font_name, 'B', 12)
+    pdf.cell(100, 10, "TOTAL TTC", 0, 0, 'R')
+    pdf.cell(40, 10, f"{data['total_ttc']:.2f} {euro}", 1, 1, 'R')
+    
+    # Gestion du retour selon la police utilisée
+    if use_chr128:
+        return pdf.output(dest='S').encode('latin-1')
+    else:
+        return pdf.output(dest='S')
 
 # --- INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Scanner de Tickets Pro", page_icon="🧾")
@@ -52,18 +83,30 @@ if fichier_image is not None:
     if st.button("Analyser et Générer la Facture"):
         with st.spinner("L'IA analyse les montants et la TVA..."):
             try:
-                # Simulation de l'appel IA (Code simplifié pour l'exemple)
-                # En production, on enverrait l'image à l'API comme vu précédemment
+                # 1. Préparation de l'image pour Gemini
                 img_bytes = fichier_image.getvalue()
                 
-                # Ici nous utilisons des données de test pour la démonstration
-                # Mais vous pouvez décommenter la logique IA réelle ici
-                resultats_ia = {
-                    "nom_magasin": "SUPER U", "date": "16/02/2026", "taux_tva": 20,
-                    "articles": [{"nom": "Fournitures bureau", "prix_unitaire_ttc": 12.50}],
-                    "total_ht": 10.42, "total_tva": 2.08, "total_ttc": 12.50
-                }
+                # 2. Appel réel à Gemini (Prompt optimisé)
+                prompt = """Analyse ce ticket de caisse. 
+                Retourne UNIQUEMENT un objet JSON avec cette structure :
+                {
+                  "nom_magasin": "string",
+                  "date": "string",
+                  "taux_tva": float,
+                  "articles": [{"nom": "string", "prix_unitaire_ttc": float}],
+                  "total_ht": float,
+                  "total_tva": float,
+                  "total_ttc": float
+                }"""
                 
+                # Correction de l'envoi d'image (format liste pour Gemini)
+                response = model.generate_content([prompt, {"mime_type": "image/jpeg", "data": img_bytes}])
+                
+                # Nettoyage de la réponse pour extraire le JSON
+                texte_reponse = response.text.replace('```json', '').replace('```', '').strip()
+                resultats_ia = json.loads(texte_reponse)
+                
+                # 3. Génération du PDF
                 pdf_output = generer_pdf(resultats_ia)
                 
                 st.success("Analyse terminée !")
@@ -74,10 +117,5 @@ if fichier_image is not None:
                     mime="application/pdf"
                 )
             except Exception as e:
-
-                st.error(f"Erreur : {e}")
-
-
-
-
-
+                st.error(f"Erreur lors de l'analyse : {e}")
+                st.info("Astuce : Vérifie que ta clé API est correcte et que le fichier DejaVuSans.ttf est bien sur GitHub.")
