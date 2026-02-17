@@ -37,7 +37,7 @@ def generer_pdf(data):
     pdf.cell(100, 10, "TOTAL TTC", 0, 0, 'R')
     pdf.cell(40, 10, f"{data['total_ttc']:.2f} {chr(128)}", 1, 1, 'R')
     
-    return pdf.output()
+    return bytes(pdf.output())
 
 # --- INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Scanner de Tickets Pro", page_icon="🧾")
@@ -76,6 +76,7 @@ if fichier_image is not None:
             except Exception as e:
 
                 st.error(f"Erreur : {e}")
+
 
 
 
