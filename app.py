@@ -10,7 +10,7 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("Clé API manquante. Configurez GEMINI_API_KEY dans les secrets.")
 
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # --- FONCTION GENERATION PDF (MÉTHODE UNICODE) ---
 def generer_pdf(data):
@@ -119,5 +119,6 @@ if fichier_image is not None:
             except Exception as e:
                 st.error(f"Erreur lors de l'analyse : {e}")
                 st.info("Astuce : Vérifie que ta clé API est correcte et que le fichier DejaVuSans.ttf est bien sur GitHub.")
+
 
 
