@@ -11,11 +11,11 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 def generer_pdf(data):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Helvetica", 'B', 16)
+    pdf.set_font("Arial", 'B', 16)
     pdf.cell(0, 10, f"FACTURE : {data['nom_magasin']}", 0, 1, 'C')
     pdf.ln(10)
     
-    pdf.set_font("Helvetica", '', 12)
+    pdf.set_font("Arial", '', 12)
     pdf.cell(0, 10, f"Date: {data['date']}", 0, 1)
     pdf.ln(5)
 
@@ -26,18 +26,18 @@ def generer_pdf(data):
 
     for art in data['articles']:
         pdf.cell(100, 10, art['nom'], 1)
-        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']:.2f} €", 1, 1, 'R')
+        pdf.cell(40, 10, f"{art['prix_unitaire_ttc']:.2f} {chr(128)}", 1, 1, 'R')
 
     pdf.ln(5)
     pdf.cell(100, 10, "TOTAL HT", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ht']:.2f} €", 1, 1, 'R')
+    pdf.cell(40, 10, f"{data['total_ht']:.2f} {chr(128)}", 1, 1, 'R')
     pdf.cell(100, 10, f"TVA ({data['taux_tva']}%)", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_tva']:.2f} €", 1, 1, 'R')
-    pdf.set_font("Helvetica", 'B', 12)
+    pdf.cell(40, 10, f"{data['total_tva']:.2f} {chr(128)}", 1, 1, 'R')
+    pdf.set_font("Arial", 'B', 12)
     pdf.cell(100, 10, "TOTAL TTC", 0, 0, 'R')
-    pdf.cell(40, 10, f"{data['total_ttc']:.2f} €", 1, 1, 'R')
+    pdf.cell(40, 10, f"{data['total_ttc']:.2f} {chr(128)}", 1, 1, 'R')
     
-    return pdf.output(dest='S')
+    return pdf.output()
 
 # --- INTERFACE STREAMLIT ---
 st.set_page_config(page_title="Scanner de Tickets Pro", page_icon="🧾")
@@ -76,5 +76,6 @@ if fichier_image is not None:
             except Exception as e:
 
                 st.error(f"Erreur : {e}")
+
 
 
